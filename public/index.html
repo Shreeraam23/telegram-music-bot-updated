@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Music Player - Continuous Player</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fab fa-telegram-plane"></i> Telegram Music Player</h1>
+            <p>Continuous Music Player</p>
+        </header>
+
+        <div class="player-container">
+            <div class="now-playing">
+                <div class="track-info">
+                    <h2 id="track-title">Loading...</h2>
+                    <p id="track-artist">Connecting to channel...</p>
+                </div>
+                <div class="track-progress">
+                    <div class="progress-bar">
+                        <div class="progress" id="progress"></div>
+                    </div>
+                    <div class="time-info">
+                        <span id="current-time">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="prev-btn" class="control-btn">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button id="play-pause-btn" class="control-btn play-btn">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button id="next-btn" class="control-btn">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+            </div>
+
+            <div class="volume-control">
+                <i class="fas fa-volume-down"></i>
+                <input type="range" id="volume-slider" min="0" max="100" value="70">
+                <i class="fas fa-volume-up"></i>
+            </div>
+        </div>
+
+        <div class="playlist">
+            <h3><i class="fas fa-list"></i> Channel Playlist</h3>
+            <div class="playlist-controls">
+                <button id="refresh-btn" class="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Refresh from Channel
+                </button>
+            </div>
+            <div id="playlist-container">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading music from Telegram channel...
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🎵 Powered by Telegram Bot API | Auto-playing music from channel</p>
+        </footer>
+    </div>
+
+    <audio id="audio-player" preload="auto"></audio>
+    <script src="script.js"></script>
+</body>
+</html>
