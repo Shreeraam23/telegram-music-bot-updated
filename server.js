@@ -184,9 +184,12 @@ async function loadGitHubUtils() {
 const app = express();
 const PORT = 5000;
 
-// Bot token from environment variable (secure)
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHANNEL_ID = -1003112397951;
+// Load configuration
+const config = require('./config');
+
+// Bot token from config (supports both env vars and hardcoded)
+const BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
+const CHANNEL_ID = config.CHANNEL_ID;
 
 if (!BOT_TOKEN) {
     console.error('❌ TELEGRAM_BOT_TOKEN environment variable is required');
@@ -253,8 +256,8 @@ async function setupBot() {
     try {
         console.log('Setting up Telegram bot with webhook...');
         
-        // Always use production URL for webhook to avoid HTTPS issues
-        const domain = 'https://telegram-music-bot.netlify.app';
+        // Get webhook URL from config
+        const domain = config.getWebPlayerUrl();
         
         // Clear any existing webhook first
         const deleteWebhookUrl = `https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`;
@@ -444,8 +447,8 @@ async function performAdvancedChannelScan() {
             
             // Re-enable webhook
             console.log('🔧 Re-enabling webhook...');
-            // Always use production URL for webhook re-enable
-            const domain = 'https://telegram-music-bot.netlify.app';
+            // Get webhook URL from config
+            const domain = config.getWebPlayerUrl();
             
             const webhookUrl = `${domain}/.netlify/functions/api/telegram-webhook`;
             const setWebhookUrl = `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`;
@@ -669,8 +672,8 @@ bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     console.log(`📱 /start command received from chat ID: ${chatId}`);
     
-    // Always use production URL for bot WebApp to avoid HTTPS issues
-    const webPlayerUrl = 'https://telegram-music-bot.netlify.app';
+    // Get web player URL from config
+    const webPlayerUrl = config.getWebPlayerUrl();
     
     const welcomeMessage = `
 🎵 *Welcome to Web Music Player Bot!* 🎶
