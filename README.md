@@ -1,103 +1,44 @@
-# 🎵 Telegram Music Bot
+# Telegram Music Bot
 
-A powerful Telegram bot that streams music from a Telegram channel to a beautiful web player interface.
+A web-based music streaming application that integrates with Telegram to continuously play music from a configured channel.
 
-## ✨ Features
+## Features
 
-- 🎵 Stream music directly from Telegram channel
-- 🌐 Beautiful web-based music player
-- ⏯️ Full playback controls (play, pause, next, previous)
-- 🔄 Automatic playlist management
-- 💾 Music caching for better performance
-- 📱 Responsive design for all devices
-- 🤖 Interactive Telegram bot commands
+- 🎵 Real-time music streaming from Telegram channel
+- 🎛️ Modern web player interface with audio controls
+- 📱 Responsive design that works on all devices
+- 🔄 Automatic playlist management and updates
+- 🤖 Telegram bot integration for seamless music management
+- 💾 Persistent music cache for faster loading
 
-## 🚀 Quick Start
+## Setup
 
-### Prerequisites
+1. Set your bot token in `config.js`
+2. Configure your channel ID
+3. Deploy to Netlify or run locally
+4. Add bot to your channel as admin
 
-- Node.js 16 or higher
-- Telegram Bot Token
-- Telegram Channel ID
+## Bot Features
 
-### Installation
+- ✅ Automatic channel access verification
+- ✅ Smart music file detection (MP3, M4A, etc.)
+- ✅ Real-time playlist synchronization
+- ✅ Error handling and reconnection
+- ✅ Music caching for offline play
 
-1. Clone the repository
-```bash
-git clone <repository-url>
-cd telegram-music-bot
-```
+## Current Status
 
-2. Install dependencies
-```bash
-npm install
-```
+- Bot: @Rajputservermusicbot
+- Channel: Web music 🎶
+- Status: ✅ Working with 13 files
+- Music files: 12 tracks loaded
 
-3. Set up environment variables
-Create a `.env` file or set these environment variables:
-```
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-URL=your_deployment_domain
-```
+## Tech Stack
 
-4. Run the bot
-```bash
-npm start
-```
+- Backend: Node.js + Express
+- Frontend: Vanilla HTML/CSS/JS
+- Bot: Telegram Bot API
+- Deployment: Netlify Functions
+- Storage: File-based caching
 
-## 🌐 Deployment on Netlify
-
-This bot is configured for Netlify deployment:
-
-1. Connect your GitHub repository to Netlify
-2. Set environment variables in Netlify dashboard:
-   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-3. Deploy!
-
-The bot will automatically use Netlify's URL environment variable.
-
-## 📱 Bot Commands
-
-- `/start` - Get welcome message and music player link
-- `/help` - Show available commands
-- `/status` - Check bot status
-- `/music` - Show current playlist
-- `/channel` - Channel information
-
-## 🎯 How It Works
-
-1. Bot connects to your Telegram channel
-2. Automatically detects audio files uploaded to the channel
-3. Creates a web player interface accessible via browser
-4. Users can control playback through both web interface and Telegram bot
-
-## 🔧 Configuration
-
-- **Channel ID**: Set in `server.js` (line 11)
-- **Port**: Default 5000, configured for Netlify
-- **Caching**: Music files are cached locally for better performance
-
-## 📂 Project Structure
-
-```
-├── server.js          # Main bot server
-├── public/            # Web player frontend
-│   ├── index.html     # Main page
-│   ├── script.js      # Player logic
-│   └── style.css      # Styling
-├── functions/         # Netlify functions
-├── netlify.toml       # Netlify configuration
-└── package.json       # Dependencies
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## 📄 License
-
-This project is open source and available under the MIT License.
+Last updated: 2025-09-26T09:14:19.831Z
