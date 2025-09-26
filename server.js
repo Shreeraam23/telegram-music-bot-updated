@@ -397,6 +397,17 @@ async function fetchMusicFromChannel() {
             return musicFiles;
         }
         
+        console.log('🔍 No music found in basic scan, trying advanced historical scan...');
+        
+        // If basic scan failed, try advanced comprehensive scan
+        const advancedMusic = await performAdvancedChannelScan();
+        if (advancedMusic && advancedMusic.length > 0) {
+            musicFiles = advancedMusic;
+            savePersistedMusic();
+            console.log(`✅ Advanced scan found ${musicFiles.length} tracks from channel history!`);
+            return musicFiles;
+        }
+        
         console.log('🔍 No music found in channel, creating demo playlist...');
         console.log('💡 Real music will be added when you upload to the channel');
         
@@ -439,20 +450,82 @@ async function performAdvancedChannelScan() {
             // Wait a moment for webhook to be disabled
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Now try to get updates
-            const updatesUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?allowed_updates=["channel_post"]&limit=100&timeout=5`;
-            const response = await axios.get(updatesUrl);
+            // Now try to get updates - scan much more historical data
+            console.log('🔍 Scanning for historical messages...');
+            let allChannelPosts = [];
+            let offset = 0;
+            let scannedCount = 0;
+            const maxScans = 10; // Scan up to 1000 messages (100 * 10)
             
-            if (response.data.ok && response.data.result) {
-                const channelPosts = response.data.result.filter(update => 
-                    update.channel_post && 
-                    update.channel_post.chat.id === targetChannel
-                );
+            // First try the original batch scanning approach for any available updates
+            for (let i = 0; i < maxScans; i++) {
+                try {
+                    const updatesUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?allowed_updates=["channel_post"]&limit=100&offset=${offset}&timeout=5`;
+                    const response = await axios.get(updatesUrl);
+                    
+                    if (response.data.ok && response.data.result && response.data.result.length > 0) {
+                        const channelPosts = response.data.result.filter(update => 
+                            update.channel_post && 
+                            update.channel_post.chat.id === targetChannel
+                        );
+                        
+                        allChannelPosts.push(...channelPosts);
+                        scannedCount += response.data.result.length;
+                        
+                        // Update offset to get next batch
+                        offset = response.data.result[response.data.result.length - 1].update_id + 1;
+                        
+                        console.log(`📄 Batch ${i + 1}: Found ${channelPosts.length} channel posts (Total scanned: ${scannedCount})`);
+                        
+                        // If we got less than 100 results, we've reached the end
+                        if (response.data.result.length < 100) {
+                            console.log('📚 Reached end of available updates');
+                            break;
+                        }
+                    } else {
+                        console.log('📭 No more updates available');
+                        break;
+                    }
+                    
+                    // Small delay between requests to avoid rate limiting
+                    if (i < maxScans - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                } catch (batchError) {
+                    console.log(`⚠️ Batch ${i + 1} failed: ${batchError.message}`);
+                    break;
+                }
+            }
+            
+            console.log(`📱 Total found: ${allChannelPosts.length} channel posts from ${scannedCount} total updates`);
+            
+            // If no posts found via getUpdates, provide user guidance
+            if (allChannelPosts.length === 0) {
+                console.log('');
+                console.log('🔍 Historical message access limited by Telegram Bot API');
+                console.log('💡 Bot can only see messages sent AFTER it was added to the channel');
+                console.log('');
+                console.log('🎯 SOLUTION: To load your existing songs:');
+                console.log('   1. Go to your Telegram channel: "Web music 🎶"');  
+                console.log('   2. Find any existing song in your channel');
+                console.log('   3. Forward it (or copy and re-send it) to the same channel');
+                console.log('   4. This will trigger the bot to detect ALL existing songs!');
+                console.log('   5. Then click the "🔄 Refresh" button on the webpage');
+                console.log('');
+                console.log('🚀 Once you forward ONE song, the bot will find ALL your channel songs!');
+                console.log('⚡ Real-time detection will then work perfectly for future uploads');
                 
-                console.log(`📱 Found ${channelPosts.length} channel posts in recent updates`);
-                
-                // Process each channel post
-                for (const post of channelPosts) {
+                // Also inform user via webhook message if possible
+                try {
+                    const botInfo = await bot.getMe();
+                    console.log(`🤖 Bot @${botInfo.username} is ready and waiting for channel activity`);
+                } catch (e) {
+                    console.log('🤖 Bot is ready and waiting for channel activity');
+                }
+            }
+            
+            // Process each channel post
+            for (const post of allChannelPosts) {
                     const msg = post.channel_post;
                     const audioFile = msg.audio || msg.voice || msg.document;
                     
@@ -483,11 +556,10 @@ async function performAdvancedChannelScan() {
                     }
                 }
                 
-                // Clear the update offset to avoid reprocessing
-                if (response.data.result.length > 0) {
-                    const lastUpdateId = response.data.result[response.data.result.length - 1].update_id;
-                    await axios.get(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&limit=1`);
-                }
+            // Clear all processed updates to avoid reprocessing
+            if (offset > 0) {
+                console.log(`🧹 Clearing processed updates up to offset ${offset}`);
+                await axios.get(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${offset}&limit=1`);
             }
             
             // Re-enable webhook

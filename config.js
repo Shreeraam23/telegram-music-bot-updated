@@ -4,7 +4,7 @@
 
 const config = {
     // Bot configuration
-    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '7594086301:AAEaxT_4lD4QC9A2pD67A-hg-YSpJbXy4L8', // Hardcoded for easy deployment
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '8358085689:AAE9RB1L1KCStZ56kRync50vwsXcLiY0VcI', // Hardcoded for easy deployment
     CHANNEL_ID: -1003112397951,
     
     // Environment detection
