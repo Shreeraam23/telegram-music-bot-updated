@@ -196,6 +196,45 @@ if (!BOT_TOKEN) {
     process.exit(1);
 }
 
+// Function to check bot permissions in channel
+async function checkBotChannelAccess() {
+    try {
+        console.log('🔍 Checking bot access to channel...');
+        
+        // Get channel info
+        const channelInfo = await bot.getChat(CHANNEL_ID);
+        console.log(`✅ Channel found: ${channelInfo.title}`);
+        
+        // Get bot info
+        const botInfo = await bot.getMe();
+        console.log(`🤖 Bot: @${botInfo.username}`);
+        
+        // Check if bot is member/admin
+        const botMember = await bot.getChatMember(CHANNEL_ID, botInfo.id);
+        
+        if (botMember.status === 'administrator' || botMember.status === 'creator') {
+            console.log('✅ Bot has admin access to channel');
+            return true;
+        } else if (botMember.status === 'member') {
+            console.log('⚠️ Bot is a member but not admin - some features may not work');
+            return true;
+        } else {
+            console.log('❌ Bot is not a member of the channel');
+            return false;
+        }
+    } catch (error) {
+        if (error.message.includes('bot is not a member')) {
+            console.log('❌ Bot is not added to the channel!');
+            console.log('🔧 Solution: Add the bot to your channel as admin');
+            console.log(`   1. Go to your channel: ${CHANNEL_ID}`);
+            console.log('   2. Add bot as admin with "Manage Messages" permission');
+        } else {
+            console.log('❌ Error checking channel access:', error.message);
+        }
+        return false;
+    }
+}
+
 // Create bot instance with webhook mode to avoid polling conflicts
 const bot = new TelegramBot(BOT_TOKEN, { 
     polling: false // Use webhook instead of polling to avoid conflicts
@@ -334,6 +373,12 @@ async function setupBot() {
 async function fetchMusicFromChannel() {
     try {
         console.log('🎵 Initializing music playlist...');
+        
+        // Check bot channel access first
+        const hasAccess = await checkBotChannelAccess();
+        if (!hasAccess) {
+            console.log('⚠️ Bot does not have channel access - using cached music if available');
+        }
         
         // First check if we have persisted real music
         if (loadPersistedMusic()) {
