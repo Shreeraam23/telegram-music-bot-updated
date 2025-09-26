@@ -1185,6 +1185,14 @@ app.get('/api/music', async (req, res) => {
     res.json(musicFiles);
 });
 
+// Frontend expects /api/playlist - add alias route
+app.get('/api/playlist', async (req, res) => {
+    if (musicFiles.length === 0) {
+        await fetchMusicFromChannel();
+    }
+    res.json(musicFiles);
+});
+
 app.get('/api/current', (req, res) => {
     if (musicFiles.length > 0) {
         res.json({
