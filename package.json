@@ -1,0 +1,33 @@
+{
+  "name": "telegram-music-player-netlify",
+  "version": "1.0.0",
+  "main": "functions/api.js",
+  "scripts": {
+    "start": "netlify dev",
+    "build": "npm install",
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "telegram",
+    "music",
+    "player",
+    "netlify",
+    "serverless"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Telegram Music Player - Serverless version for Netlify",
+  "dependencies": {
+    "@netlify/blobs": "^10.0.11",
+    "@netlify/functions": "^4.2.6",
+    "@octokit/rest": "^22.0.0",
+    "axios": "^1.12.2",
+    "express": "^5.1.0",
+    "netlify-cli": "^23.7.3",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "serverless-http": "^4.0.0"
+  }
+}
