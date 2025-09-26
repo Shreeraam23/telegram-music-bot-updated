@@ -77,25 +77,39 @@ class TelegramMusicPlayer {
     
     async loadPlaylist() {
         try {
-            // Use proper API URL for both development and production
+            console.log('🔄 Loading playlist...');
+            
+            // Use proper API URL for both development and production  
             const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            const response = await fetch(`${baseUrl}/api/playlist`);
+            const apiUrl = `${baseUrl}/api/playlist?_t=${Date.now()}`;
+            
+            console.log('📡 API URL:', apiUrl);
+            
+            const response = await fetch(apiUrl, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            });
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             this.playlist = await response.json();
+            console.log('✅ Loaded playlist:', this.playlist.length, 'tracks');
+            
             this.renderPlaylist();
             
             if (this.playlist.length > 0) {
                 await this.loadCurrentTrack();
+                this.showMessage(`✅ Loaded ${this.playlist.length} tracks from channel`);
             } else {
                 this.showMessage('No music found in channel. Please check if the bot has access to the channel.');
             }
         } catch (error) {
-            console.error('Error loading playlist:', error);
-            this.showMessage('Error connecting to Telegram channel. Please try again.');
+            console.error('❌ Error loading playlist:', error);
+            this.showMessage(`Error connecting to Telegram channel: ${error.message}`);
         }
     }
     
