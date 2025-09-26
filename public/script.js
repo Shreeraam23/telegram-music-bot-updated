@@ -206,7 +206,13 @@ class TelegramMusicPlayer {
                 this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
             }).catch(error => {
                 console.error('Error playing audio:', error);
-                this.showMessage('Error playing audio. The file might not be supported.');
+                // Only show error if audio is actually not playing
+                if (this.audio.paused && this.audio.currentTime === 0) {
+                    this.showMessage('Error playing audio. The file might not be supported.');
+                } else {
+                    // Audio might be playing despite the Promise rejection
+                    console.log('Audio play promise rejected but audio might still be playing');
+                }
             });
         } else {
             this.showMessage('No audio file available to play.');
