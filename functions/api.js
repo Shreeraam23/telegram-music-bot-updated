@@ -219,46 +219,43 @@ async function saveMusicData() {
     }
 }
 
-// Create fallback playlist when channel access fails
-async function createFallbackPlaylist() {
-    console.log('📻 Creating demo playlist (channel access limited)');
+// Try to get real channel music instead of demo playlist
+async function loadChannelMusic() {
+    console.log('🎵 Attempting to load real music from channel...');
     
-    musicFiles = [
-        {
-            title: "Demo Song 1",
-            url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-            duration: "4:47",
-            performer: "SoundHelix"
-        },
-        {
-            title: "Demo Song 2", 
-            url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-            duration: "4:44",
-            performer: "SoundHelix"
-        },
-        {
-            title: "Demo Song 3",
-            url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", 
-            duration: "5:10",
-            performer: "SoundHelix"
-        }
-    ];
+    // Return empty array instead of demo songs
+    // Real music should be loaded from storage/cache
+    musicFiles = [];
     
-    console.log(`✅ Demo playlist ready with ${musicFiles.length} tracks`);
-    console.log('💡 To access real channel music, add the bot as admin to the channel');
+    console.log('⚠️ No music found. Check if:');
+    console.log('   • Bot has admin access to channel');
+    console.log('   • Music files are uploaded to channel');
+    console.log('   • Storage/cache is properly configured');
     
-    await saveMusicData();
     return musicFiles;
 }
 
 // Initialize music data
 async function initializeMusic() {
+    console.log('🎵 Initializing music data...');
+    
     // First try to load from persistent storage
     const loaded = await loadMusicData();
     
-    if (!loaded || musicFiles.length === 0) {
-        // If no cached data, create fallback playlist
-        await createFallbackPlaylist();
+    if (loaded && musicFiles.length > 0) {
+        console.log(`✅ Loaded ${musicFiles.length} real music files from storage`);
+        return;
+    }
+    
+    // If no cached data, try to load from channel
+    console.log('⚠️ No cached music found, attempting to load from channel...');
+    await loadChannelMusic();
+    
+    if (musicFiles.length === 0) {
+        console.log('❌ No music available. Please:');
+        console.log('   1. Make sure bot is admin in channel');
+        console.log('   2. Upload music files to channel');
+        console.log('   3. Use /refresh command to sync');
     }
 }
 
