@@ -464,182 +464,28 @@ router.get('/position', (req, res) => {
     res.json({ position: currentPosition });
 });
 
-// Enhanced refresh music endpoint with advanced channel scanning
+// Refresh music endpoint
 router.post('/refresh', async (req, res) => {
     try {
-        console.log('🔄 Enhanced manual refresh requested - starting deep channel scan...');
+        console.log('🔄 Manual refresh requested - checking for updates...');
         
-        // Clear current music cache
-        const previousTrackCount = musicFiles.length;
-        musicFiles.length = 0;
-        currentIndex = 0;
-        
-        // Clear cached data file
-        try {
-            const fs = require('fs');
-            if (fs.existsSync('music_cache.json')) {
-                fs.unlinkSync('music_cache.json');
-                console.log('🗑️ Cleared music cache file');
-            }
-        } catch (clearError) {
-            console.log('⚠️ Could not clear cache file:', clearError.message);
-        }
-        
-        // Enhanced channel scanning function for API context
-        async function enhancedChannelScan() {
-            try {
-                console.log('🔍 Starting enhanced channel scan from API...');
-                
-                if (!bot) {
-                    await initBot();
-                }
-                
-                if (!bot) {
-                    console.log('❌ Bot not available for scanning');
-                    return [];
-                }
-                
-                const channelInfo = await bot.getChat(CHANNEL_ID);
-                console.log(`✅ Found channel: ${channelInfo.title}`);
-                
-                // Check admin access
-                const botInfo = await bot.getMe();
-                const adminsList = await bot.getChatAdministrators(channelInfo.id);
-                const botAdmin = adminsList.find(admin => admin.user.id.toString() === botInfo.id.toString());
-                
-                if (!botAdmin) {
-                    console.log('⚠️ Bot is not admin - cannot scan');
-                    return [];
-                }
-                
-                console.log('✅ Bot confirmed as admin - starting message ID scanning...');
-                const foundTracks = [];
-                
-                // Get current message ID
-                const testMsg = await bot.sendMessage(channelInfo.id, '🔍 Scanning...', { 
-                    disable_notification: true 
-                });
-                const currentMsgId = testMsg.message_id;
-                await bot.deleteMessage(channelInfo.id, testMsg.message_id);
-                
-                console.log(`📍 Current message ID: ${currentMsgId}, scanning backwards...`);
-                
-                // Scan backwards through message IDs
-                let scannedCount = 0;
-                const maxScan = 500; // Scan last 500 messages
-                
-                for (let msgId = currentMsgId - 1; msgId > Math.max(1, currentMsgId - maxScan); msgId--) {
-                    try {
-                        // Try to forward message to access its content
-                        const forwardedMsg = await bot.forwardMessage(channelInfo.id, channelInfo.id, msgId);
-                        scannedCount++;
-                        
-                        // Check for audio content
-                        const audioFile = forwardedMsg.audio || forwardedMsg.voice || forwardedMsg.document;
-                        
-                        if (audioFile) {
-                            const isAudio = audioFile.mime_type?.includes('audio') || 
-                                           audioFile.file_name?.match(/\.(mp3|wav|ogg|m4a|flac|aac|mp4)$/i) ||
-                                           forwardedMsg.audio;
-                            
-                            if (isAudio) {
-                                try {
-                                    const fileUrl = await bot.getFileLink(audioFile.file_id);
-                                    const track = {
-                                        title: audioFile.title || audioFile.file_name || audioFile.performer || `Music ${foundTracks.length + 1}`,
-                                        url: fileUrl,
-                                        duration: audioFile.duration ? `${Math.floor(audioFile.duration / 60)}:${(audioFile.duration % 60).toString().padStart(2, '0')}` : 'Unknown',
-                                        fileId: audioFile.file_id,
-                                        performer: audioFile.performer || 'Unknown Artist',
-                                        messageId: msgId,
-                                        uploadDate: forwardedMsg.date ? new Date(forwardedMsg.date * 1000).toISOString() : new Date().toISOString()
-                                    };
-                                    
-                                    foundTracks.push(track);
-                                    console.log(`🎵 Found: ${track.title} (ID: ${msgId})`);
-                                    
-                                    // Clean up forwarded message
-                                    await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id);
-                                    
-                                    // Prevent rate limiting
-                                    await new Promise(resolve => setTimeout(resolve, 50));
-                                    
-                                } catch (fileError) {
-                                    console.log(`⚠️ Could not get file link for message ${msgId}`);
-                                    await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id).catch(() => {});
-                                }
-                            } else {
-                                // Delete non-audio forwarded message
-                                await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id).catch(() => {});
-                            }
-                        } else {
-                            // Delete non-audio forwarded message
-                            await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id).catch(() => {});
-                        }
-                        
-                        // Stop if we found enough songs
-                        if (foundTracks.length >= 50) {
-                            console.log('📊 Found maximum songs (50), stopping scan');
-                            break;
-                        }
-                        
-                    } catch (forwardError) {
-                        // Message doesn't exist or can't be forwarded
-                        continue;
-                    }
-                }
-                
-                console.log(`📊 Scanned ${scannedCount} messages, found ${foundTracks.length} audio files`);
-                
-                // Sort by message ID (oldest first)
-                foundTracks.sort((a, b) => a.messageId - b.messageId);
-                return foundTracks;
-                
-            } catch (scanError) {
-                console.error('❌ Enhanced scan error:', scanError.message);
-                return [];
-            }
-        }
-        
-        // Perform enhanced scan
-        const scannedTracks = await enhancedChannelScan();
-        
-        if (scannedTracks.length > 0) {
-            // Add scanned tracks to music files
-            musicFiles.splice(0, musicFiles.length, ...scannedTracks);
-            await saveMusicData();
-            console.log(`✅ Enhanced refresh found ${musicFiles.length} tracks from channel!`);
-        } else {
-            // Fallback to regular initialization
-            console.log('🔄 Enhanced scan found no tracks, falling back to regular init...');
-            await initializeMusic();
-        }
+        // Reinitialize music
+        await initializeMusic();
         
         const hasRealMusic = musicFiles.length > 0 && !musicFiles[0].title?.includes('Demo Song');
-        const newTracks = Math.max(0, musicFiles.length - previousTrackCount);
         
-        const result = {
-            success: true,
-            message: hasRealMusic ? 
-                `Enhanced scan found ${musicFiles.length} tracks from channel!` : 
-                `No channel music found - loaded ${musicFiles.length} demo tracks`,
+        res.json({ 
+            success: true, 
+            message: `Playlist refreshed! Total: ${musicFiles.length} tracks`,
             tracks: musicFiles.length,
-            newTracks: newTracks,
+            newTracks: 0, // This would require more complex sync logic
             removedTracks: 0,
-            isReal: hasRealMusic,
-            scanMethod: 'enhanced'
-        };
-        
-        console.log(`✅ Enhanced manual refresh completed: ${musicFiles.length} tracks loaded`);
-        res.json(result);
+            isReal: hasRealMusic
+        });
         
     } catch (error) {
-        console.error('❌ Error during enhanced manual refresh:', error);
-        res.json({ 
-            success: false, 
-            error: error.message,
-            tracks: musicFiles.length 
-        });
+        console.error('❌ Error during manual refresh:', error);
+        res.json({ success: false, error: error.message });
     }
 });
 
