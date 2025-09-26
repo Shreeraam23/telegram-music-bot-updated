@@ -9,9 +9,12 @@ const storage = require('./storage');
 const app = express();
 const router = express.Router();
 
-// Bot token from environment variable (secure)
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHANNEL_ID = -1003112397951;
+// Load configuration
+const config = require('../config');
+
+// Bot token from config (supports both env vars and hardcoded)
+const BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
+const CHANNEL_ID = config.CHANNEL_ID;
 
 // Global variables for music state
 let musicFiles = [];
@@ -41,8 +44,8 @@ async function initBot() {
 function setupBotCommands() {
     if (!bot) return;
     
-    // Get the proper domain (Netlify URL or localhost for development)
-    const webPlayerUrl = process.env.URL || 'https://telegram-music-bot.netlify.app';
+    // Get web player URL from config
+    const webPlayerUrl = config.getWebPlayerUrl();
     
     // /start command
     bot.onText(/\/start/, async (msg) => {
