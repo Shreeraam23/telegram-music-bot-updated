@@ -45,6 +45,39 @@ class PersistentStorage {
                 return this.memoryCache;
             }
             
+            // Try to load from local file system first (works in both environments)
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                
+                // Try multiple possible paths for music_cache.json
+                const possiblePaths = [
+                    './music_cache.json',
+                    '../music_cache.json',
+                    '../../music_cache.json',
+                    path.join(process.cwd(), 'music_cache.json'),
+                ];
+                
+                for (const filePath of possiblePaths) {
+                    try {
+                        if (fs.existsSync(filePath)) {
+                            const data = fs.readFileSync(filePath, 'utf8');
+                            const parsed = JSON.parse(data);
+                            if (parsed.musicFiles && parsed.musicFiles.length > 0) {
+                                this.memoryCache = parsed;
+                                console.log(`✅ Loaded ${parsed.musicFiles.length} cached music files from ${filePath}`);
+                                return parsed;
+                            }
+                        }
+                    } catch (err) {
+                        // Continue to next path
+                    }
+                }
+                console.log('📭 No music_cache.json found in expected locations');
+            } catch (fsError) {
+                console.log('⚠️ File system access failed:', fsError.message);
+            }
+            
             // Try to load from Netlify Blobs (REAL persistence)
             if (this.blobStore) {
                 try {
