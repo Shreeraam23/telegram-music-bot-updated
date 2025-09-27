@@ -111,7 +111,8 @@ class TelegramMusicPlayer {
                     this.showMessage(`✅ Loaded ${this.playlist.length} tracks from channel`);
                 }
             } else {
-                this.showMessage('⚠️ Channel se music load nahi ho saki. Telegram channel me music upload karke refresh button dabayein!');
+                this.showMessage('📱 आपके existing songs दिखाने के लिए एक simple step करें!');
+                this.showDetailedInstructions();
             }
         } catch (error) {
             console.error('❌ Error loading playlist:', error);
@@ -151,11 +152,23 @@ class TelegramMusicPlayer {
             this.playlistContainer.innerHTML = `
                 <div class="loading">
                     <i class="fas fa-music"></i>
-                    <p>अभी तक channel में कोई music नहीं मिली।</p>
-                    <p style="font-size: 14px; color: #666; margin-top: 10px;">
-                        📱 अपने Telegram channel में music upload करें<br>
-                        🔄 फिर refresh button दबाएं
-                    </p>
+                    <h3 style="color: #007bff; margin: 15px 0;">🎵 आपके Songs दिखाने के लिए</h3>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left;">
+                        <p style="font-weight: bold; color: #28a745; margin-bottom: 15px;">✨ Simple Solution:</p>
+                        <ol style="color: #495057; line-height: 1.6;">
+                            <li>📱 अपना Telegram channel "🎶 Web music" खोलें</li>
+                            <li>🎵 कोई भी एक existing song ढूंढें</li>
+                            <li>➡️ Song पर hold करके "Forward" करें</li>
+                            <li>🔄 Same channel में forward करें</li>
+                            <li>✨ यहां आकर Refresh दबाएं</li>
+                        </ol>
+                        <p style="color: #dc3545; font-weight: bold; margin-top: 15px;">
+                            🎆 बस एक song forward करने से आपके सारे songs दिख जाएंगे!
+                        </p>
+                    </div>
+                    <button onclick="player.refreshPlaylist()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+                        🔄 Refresh Songs
+                    </button>
                 </div>
             `;
             return;
