@@ -80,8 +80,8 @@ class TelegramMusicPlayer {
             console.log('🔄 Loading playlist...');
             
             // Use proper API URL for both development and production  
-            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            const apiUrl = `${baseUrl}/api/playlist?_t=${Date.now()}`;
+            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+            const apiUrl = `${baseUrl}/playlist?_t=${Date.now()}`;
             
             console.log('📡 API URL:', apiUrl);
             
@@ -122,8 +122,8 @@ class TelegramMusicPlayer {
     
     async loadCurrentTrack() {
         try {
-            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            const response = await fetch(`${baseUrl}/api/current`);
+            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+            const response = await fetch(`${baseUrl}/current`);
             const data = await response.json();
             
             if (data.track) {
@@ -189,8 +189,8 @@ class TelegramMusicPlayer {
     async playTrack(index) {
         try {
             // Call backend API to set the specific track
-            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            const response = await fetch(`${baseUrl}/api/track/${index}`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+            const response = await fetch(`${baseUrl}/track/${index}`, { method: 'POST' });
             const result = await response.json();
             
             if (result.success) {
@@ -250,8 +250,8 @@ class TelegramMusicPlayer {
     
     async nextTrack() {
         try {
-            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            await fetch(`${baseUrl}/api/next`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+            await fetch(`${baseUrl}/next`, { method: 'POST' });
             await this.loadCurrentTrack();
             if (this.isPlaying) {
                 this.play();
@@ -264,8 +264,8 @@ class TelegramMusicPlayer {
     
     async previousTrack() {
         try {
-            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            await fetch(`${baseUrl}/api/prev`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+            await fetch(`${baseUrl}/prev`, { method: 'POST' });
             await this.loadCurrentTrack();
             if (this.isPlaying) {
                 this.play();
@@ -322,8 +322,8 @@ class TelegramMusicPlayer {
                         
                         // Sync position with backend
                         try {
-                            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-                            await fetch(`${baseUrl}/api/seek`, {
+                            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+                            await fetch(`${baseUrl}/seek`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
@@ -361,8 +361,8 @@ class TelegramMusicPlayer {
             
             this.showMessage('Refreshing playlist from Telegram channel...');
             
-            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
-            const response = await fetch(`${baseUrl}/api/refresh`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
+            const response = await fetch(`${baseUrl}/refresh`, { method: 'POST' });
             const result = await response.json();
             
             if (result.success) {
