@@ -240,6 +240,21 @@ const bot = new TelegramBot(BOT_TOKEN, {
     polling: false // Use webhook instead of polling to avoid conflicts
 });
 
+// Disable caching for JS and CSS files to ensure updates are loaded
+app.use('/script.js', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
+
+app.use('/style.css', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
+
 // Serve static files
 app.use(express.static('public'));
 app.use(express.json());
