@@ -21,6 +21,7 @@ let musicFiles = [];
 let currentIndex = 0;
 let currentPosition = 0;
 let bot = null;
+let isRefreshing = false; // Add concurrency control for refresh operations
 
 // Initialize bot instance with proper webhook setup
 async function initBot() {
@@ -467,25 +468,59 @@ router.get('/position', (req, res) => {
 // Refresh music endpoint
 router.post('/refresh', async (req, res) => {
     try {
+        // Check if refresh is already in progress
+        if (isRefreshing) {
+            console.log('⏳ Refresh already in progress, waiting...');
+            return res.json({ 
+                success: false, 
+                error: 'Refresh already in progress. Please wait a moment and try again.',
+                isRefreshing: true
+            });
+        }
+        
+        isRefreshing = true;
         console.log('🔄 Manual refresh requested - checking for updates...');
+        
+        // Store old playlist for comparison
+        const oldPlaylistLength = musicFiles.length;
+        const wasDemo = musicFiles.length > 0 && musicFiles[0].title?.includes('Demo Song');
         
         // Reinitialize music
         await initializeMusic();
         
         const hasRealMusic = musicFiles.length > 0 && !musicFiles[0].title?.includes('Demo Song');
+        const newTracks = Math.max(0, musicFiles.length - (wasDemo ? 0 : oldPlaylistLength));
+        
+        let message;
+        if (hasRealMusic) {
+            message = `✅ Found ${musicFiles.length} tracks from channel!`;
+            if (newTracks > 0) {
+                message += ` (${newTracks} new tracks added)`;
+            }
+        } else if (musicFiles.length > 0) {
+            message = `⚠️ Using demo playlist. Upload music to your Telegram channel to get real songs!`;
+        } else {
+            message = `❌ No music found. Please upload audio files to your Telegram channel.`;
+        }
         
         res.json({ 
             success: true, 
-            message: `Playlist refreshed! Total: ${musicFiles.length} tracks`,
+            message: message,
             tracks: musicFiles.length,
-            newTracks: 0, // This would require more complex sync logic
+            newTracks: newTracks,
             removedTracks: 0,
-            isReal: hasRealMusic
+            isReal: hasRealMusic,
+            wasDemo: wasDemo
         });
         
     } catch (error) {
         console.error('❌ Error during manual refresh:', error);
-        res.json({ success: false, error: error.message });
+        res.json({ 
+            success: false, 
+            error: `Refresh failed: ${error.message}. Please try again in a few seconds.`
+        });
+    } finally {
+        isRefreshing = false;
     }
 });
 
