@@ -21,8 +21,6 @@ let musicFiles = [];
 let currentIndex = 0;
 let currentPosition = 0;
 let bot = null;
-let isRefreshing = false; // Add concurrency control for refresh operations
-let isInitializing = false; // Add concurrency control for music initialization
 
 // Initialize bot instance with proper webhook setup
 async function initBot() {
@@ -237,42 +235,27 @@ async function loadChannelMusic() {
     return musicFiles;
 }
 
-// Initialize music data with concurrency control
+// Initialize music data
 async function initializeMusic() {
-    // Prevent concurrent initialization
-    if (isInitializing) {
-        console.log('⏳ Music initialization already in progress, waiting...');
-        // Wait for current initialization to complete
-        while (isInitializing) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
+    console.log('🎵 Initializing music data...');
+    
+    // First try to load from persistent storage
+    const loaded = await loadMusicData();
+    
+    if (loaded && musicFiles.length > 0) {
+        console.log(`✅ Loaded ${musicFiles.length} real music files from storage`);
         return;
     }
     
-    isInitializing = true;
-    try {
-        console.log('🎵 Initializing music data...');
-        
-        // First try to load from persistent storage
-        const loaded = await loadMusicData();
-        
-        if (loaded && musicFiles.length > 0) {
-            console.log(`✅ Loaded ${musicFiles.length} real music files from storage`);
-            return;
-        }
-        
-        // If no cached data, try to load from channel
-        console.log('⚠️ No cached music found, attempting to load from channel...');
-        await loadChannelMusic();
-        
-        if (musicFiles.length === 0) {
-            console.log('❌ No music available. Please:');
-            console.log('   1. Make sure bot is admin in channel');
-            console.log('   2. Upload music files to channel');
-            console.log('   3. Use /refresh command to sync');
-        }
-    } finally {
-        isInitializing = false;
+    // If no cached data, try to load from channel
+    console.log('⚠️ No cached music found, attempting to load from channel...');
+    await loadChannelMusic();
+    
+    if (musicFiles.length === 0) {
+        console.log('❌ No music available. Please:');
+        console.log('   1. Make sure bot is admin in channel');
+        console.log('   2. Upload music files to channel');
+        console.log('   3. Use /refresh command to sync');
     }
 }
 
@@ -481,97 +464,181 @@ router.get('/position', (req, res) => {
     res.json({ position: currentPosition });
 });
 
-// Refresh music endpoint
+// Enhanced refresh music endpoint with advanced channel scanning
 router.post('/refresh', async (req, res) => {
     try {
-        // Check if refresh is already in progress
-        if (isRefreshing) {
-            console.log('⏳ Refresh already in progress, waiting...');
-            return res.json({ 
-                success: false, 
-                error: 'Refresh already in progress. Please wait a moment and try again.',
-                isRefreshing: true
-            });
+        console.log('🔄 Enhanced manual refresh requested - starting deep channel scan...');
+        
+        // Clear current music cache
+        const previousTrackCount = musicFiles.length;
+        musicFiles.length = 0;
+        currentIndex = 0;
+        
+        // Clear cached data file
+        try {
+            const fs = require('fs');
+            if (fs.existsSync('music_cache.json')) {
+                fs.unlinkSync('music_cache.json');
+                console.log('🗑️ Cleared music cache file');
+            }
+        } catch (clearError) {
+            console.log('⚠️ Could not clear cache file:', clearError.message);
         }
         
-        isRefreshing = true;
-        console.log('🔄 Manual refresh requested - checking for updates...');
+        // Enhanced channel scanning function for API context
+        async function enhancedChannelScan() {
+            try {
+                console.log('🔍 Starting enhanced channel scan from API...');
+                
+                if (!bot) {
+                    await initBot();
+                }
+                
+                if (!bot) {
+                    console.log('❌ Bot not available for scanning');
+                    return [];
+                }
+                
+                const channelInfo = await bot.getChat(CHANNEL_ID);
+                console.log(`✅ Found channel: ${channelInfo.title}`);
+                
+                // Check admin access
+                const botInfo = await bot.getMe();
+                const adminsList = await bot.getChatAdministrators(channelInfo.id);
+                const botAdmin = adminsList.find(admin => admin.user.id.toString() === botInfo.id.toString());
+                
+                if (!botAdmin) {
+                    console.log('⚠️ Bot is not admin - cannot scan');
+                    return [];
+                }
+                
+                console.log('✅ Bot confirmed as admin - starting message ID scanning...');
+                const foundTracks = [];
+                
+                // Get current message ID
+                const testMsg = await bot.sendMessage(channelInfo.id, '🔍 Scanning...', { 
+                    disable_notification: true 
+                });
+                const currentMsgId = testMsg.message_id;
+                await bot.deleteMessage(channelInfo.id, testMsg.message_id);
+                
+                console.log(`📍 Current message ID: ${currentMsgId}, scanning backwards...`);
+                
+                // Scan backwards through message IDs
+                let scannedCount = 0;
+                const maxScan = 500; // Scan last 500 messages
+                
+                for (let msgId = currentMsgId - 1; msgId > Math.max(1, currentMsgId - maxScan); msgId--) {
+                    try {
+                        // Try to forward message to access its content
+                        const forwardedMsg = await bot.forwardMessage(channelInfo.id, channelInfo.id, msgId);
+                        scannedCount++;
+                        
+                        // Check for audio content
+                        const audioFile = forwardedMsg.audio || forwardedMsg.voice || forwardedMsg.document;
+                        
+                        if (audioFile) {
+                            const isAudio = audioFile.mime_type?.includes('audio') || 
+                                           audioFile.file_name?.match(/\.(mp3|wav|ogg|m4a|flac|aac|mp4)$/i) ||
+                                           forwardedMsg.audio;
+                            
+                            if (isAudio) {
+                                try {
+                                    const fileUrl = await bot.getFileLink(audioFile.file_id);
+                                    const track = {
+                                        title: audioFile.title || audioFile.file_name || audioFile.performer || `Music ${foundTracks.length + 1}`,
+                                        url: fileUrl,
+                                        duration: audioFile.duration ? `${Math.floor(audioFile.duration / 60)}:${(audioFile.duration % 60).toString().padStart(2, '0')}` : 'Unknown',
+                                        fileId: audioFile.file_id,
+                                        performer: audioFile.performer || 'Unknown Artist',
+                                        messageId: msgId,
+                                        uploadDate: forwardedMsg.date ? new Date(forwardedMsg.date * 1000).toISOString() : new Date().toISOString()
+                                    };
+                                    
+                                    foundTracks.push(track);
+                                    console.log(`🎵 Found: ${track.title} (ID: ${msgId})`);
+                                    
+                                    // Clean up forwarded message
+                                    await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id);
+                                    
+                                    // Prevent rate limiting
+                                    await new Promise(resolve => setTimeout(resolve, 50));
+                                    
+                                } catch (fileError) {
+                                    console.log(`⚠️ Could not get file link for message ${msgId}`);
+                                    await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id).catch(() => {});
+                                }
+                            } else {
+                                // Delete non-audio forwarded message
+                                await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id).catch(() => {});
+                            }
+                        } else {
+                            // Delete non-audio forwarded message
+                            await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id).catch(() => {});
+                        }
+                        
+                        // Stop if we found enough songs
+                        if (foundTracks.length >= 50) {
+                            console.log('📊 Found maximum songs (50), stopping scan');
+                            break;
+                        }
+                        
+                    } catch (forwardError) {
+                        // Message doesn't exist or can't be forwarded
+                        continue;
+                    }
+                }
+                
+                console.log(`📊 Scanned ${scannedCount} messages, found ${foundTracks.length} audio files`);
+                
+                // Sort by message ID (oldest first)
+                foundTracks.sort((a, b) => a.messageId - b.messageId);
+                return foundTracks;
+                
+            } catch (scanError) {
+                console.error('❌ Enhanced scan error:', scanError.message);
+                return [];
+            }
+        }
         
-        // Store old playlist for comparison
-        const oldPlaylistLength = musicFiles.length;
-        const wasDemo = musicFiles.length > 0 && musicFiles[0].title?.includes('Demo Song');
+        // Perform enhanced scan
+        const scannedTracks = await enhancedChannelScan();
         
-        // Reinitialize music
-        await initializeMusic();
+        if (scannedTracks.length > 0) {
+            // Add scanned tracks to music files
+            musicFiles.splice(0, musicFiles.length, ...scannedTracks);
+            await saveMusicData();
+            console.log(`✅ Enhanced refresh found ${musicFiles.length} tracks from channel!`);
+        } else {
+            // Fallback to regular initialization
+            console.log('🔄 Enhanced scan found no tracks, falling back to regular init...');
+            await initializeMusic();
+        }
         
         const hasRealMusic = musicFiles.length > 0 && !musicFiles[0].title?.includes('Demo Song');
-        const newTracks = Math.max(0, musicFiles.length - (wasDemo ? 0 : oldPlaylistLength));
+        const newTracks = Math.max(0, musicFiles.length - previousTrackCount);
         
-        let message;
-        if (hasRealMusic) {
-            message = `✅ Found ${musicFiles.length} tracks from channel!`;
-            if (newTracks > 0) {
-                message += ` (${newTracks} new tracks added)`;
-            }
-        } else if (musicFiles.length > 0) {
-            message = `⚠️ Using demo playlist. Upload music to your Telegram channel to get real songs!`;
-        } else {
-            message = `❌ No music found. Please upload audio files to your Telegram channel.`;
-        }
-        
-        res.json({ 
-            success: true, 
-            message: message,
+        const result = {
+            success: true,
+            message: hasRealMusic ? 
+                `Enhanced scan found ${musicFiles.length} tracks from channel!` : 
+                `No channel music found - loaded ${musicFiles.length} demo tracks`,
             tracks: musicFiles.length,
             newTracks: newTracks,
             removedTracks: 0,
             isReal: hasRealMusic,
-            wasDemo: wasDemo
-        });
+            scanMethod: 'enhanced'
+        };
+        
+        console.log(`✅ Enhanced manual refresh completed: ${musicFiles.length} tracks loaded`);
+        res.json(result);
         
     } catch (error) {
-        console.error('❌ Error during manual refresh:', error);
+        console.error('❌ Error during enhanced manual refresh:', error);
         res.json({ 
             success: false, 
-            error: `Refresh failed: ${error.message}. Please try again in a few seconds.`
-        });
-    } finally {
-        isRefreshing = false;
-    }
-});
-
-// GitHub validation endpoint
-router.get('/github-status', async (req, res) => {
-    try {
-        console.log('🔍 Checking GitHub repository status...');
-        
-        const repoUrl = 'https://api.github.com/repos/Shreeraam23/telegram-music-bot-updated';
-        const response = await fetch(repoUrl);
-        
-        if (response.ok) {
-            const repoData = await response.json();
-            res.json({
-                success: true,
-                repository: {
-                    name: repoData.full_name,
-                    url: repoData.html_url,
-                    lastUpdated: repoData.updated_at,
-                    description: repoData.description,
-                    language: repoData.language
-                },
-                message: '✅ GitHub repository is accessible and up to date'
-            });
-        } else {
-            res.json({
-                success: false,
-                error: 'Unable to access GitHub repository'
-            });
-        }
-    } catch (error) {
-        console.error('❌ Error checking GitHub status:', error);
-        res.json({
-            success: false,
-            error: `GitHub check failed: ${error.message}`
+            error: error.message,
+            tracks: musicFiles.length 
         });
     }
 });
