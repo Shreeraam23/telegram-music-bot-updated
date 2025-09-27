@@ -103,9 +103,15 @@ class TelegramMusicPlayer {
             
             if (this.playlist.length > 0) {
                 await this.loadCurrentTrack();
-                this.showMessage(`✅ Loaded ${this.playlist.length} tracks from channel`);
+                // Check if it's demo music or real music
+                const isDemo = this.playlist[0]?.title?.includes('Demo Song') || false;
+                if (isDemo) {
+                    this.showMessage(`⚠️ Using demo playlist (${this.playlist.length} tracks). Upload music to your Telegram channel to get your actual songs!`);
+                } else {
+                    this.showMessage(`✅ Loaded ${this.playlist.length} tracks from channel`);
+                }
             } else {
-                this.showMessage('No music found in channel. Please check if the bot has access to the channel.');
+                this.showMessage('⚠️ Channel se music load nahi ho saki. Telegram channel me music upload karke refresh button dabayein!');
             }
         } catch (error) {
             console.error('❌ Error loading playlist:', error);
@@ -145,7 +151,11 @@ class TelegramMusicPlayer {
             this.playlistContainer.innerHTML = `
                 <div class="loading">
                     <i class="fas fa-music"></i>
-                    No music files found in the channel yet.
+                    <p>अभी तक channel में कोई music नहीं मिली।</p>
+                    <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                        📱 अपने Telegram channel में music upload करें<br>
+                        🔄 फिर refresh button दबाएं
+                    </p>
                 </div>
             `;
             return;
