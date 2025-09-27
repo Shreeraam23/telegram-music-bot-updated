@@ -22,6 +22,7 @@ let currentIndex = 0;
 let currentPosition = 0;
 let bot = null;
 let isRefreshing = false; // Add concurrency control for refresh operations
+let isInitializing = false; // Add concurrency control for music initialization
 
 // Initialize bot instance with proper webhook setup
 async function initBot() {
@@ -236,27 +237,42 @@ async function loadChannelMusic() {
     return musicFiles;
 }
 
-// Initialize music data
+// Initialize music data with concurrency control
 async function initializeMusic() {
-    console.log('🎵 Initializing music data...');
-    
-    // First try to load from persistent storage
-    const loaded = await loadMusicData();
-    
-    if (loaded && musicFiles.length > 0) {
-        console.log(`✅ Loaded ${musicFiles.length} real music files from storage`);
+    // Prevent concurrent initialization
+    if (isInitializing) {
+        console.log('⏳ Music initialization already in progress, waiting...');
+        // Wait for current initialization to complete
+        while (isInitializing) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
         return;
     }
     
-    // If no cached data, try to load from channel
-    console.log('⚠️ No cached music found, attempting to load from channel...');
-    await loadChannelMusic();
-    
-    if (musicFiles.length === 0) {
-        console.log('❌ No music available. Please:');
-        console.log('   1. Make sure bot is admin in channel');
-        console.log('   2. Upload music files to channel');
-        console.log('   3. Use /refresh command to sync');
+    isInitializing = true;
+    try {
+        console.log('🎵 Initializing music data...');
+        
+        // First try to load from persistent storage
+        const loaded = await loadMusicData();
+        
+        if (loaded && musicFiles.length > 0) {
+            console.log(`✅ Loaded ${musicFiles.length} real music files from storage`);
+            return;
+        }
+        
+        // If no cached data, try to load from channel
+        console.log('⚠️ No cached music found, attempting to load from channel...');
+        await loadChannelMusic();
+        
+        if (musicFiles.length === 0) {
+            console.log('❌ No music available. Please:');
+            console.log('   1. Make sure bot is admin in channel');
+            console.log('   2. Upload music files to channel');
+            console.log('   3. Use /refresh command to sync');
+        }
+    } finally {
+        isInitializing = false;
     }
 }
 
@@ -521,6 +537,42 @@ router.post('/refresh', async (req, res) => {
         });
     } finally {
         isRefreshing = false;
+    }
+});
+
+// GitHub validation endpoint
+router.get('/github-status', async (req, res) => {
+    try {
+        console.log('🔍 Checking GitHub repository status...');
+        
+        const repoUrl = 'https://api.github.com/repos/Shreeraam23/telegram-music-bot-updated';
+        const response = await fetch(repoUrl);
+        
+        if (response.ok) {
+            const repoData = await response.json();
+            res.json({
+                success: true,
+                repository: {
+                    name: repoData.full_name,
+                    url: repoData.html_url,
+                    lastUpdated: repoData.updated_at,
+                    description: repoData.description,
+                    language: repoData.language
+                },
+                message: '✅ GitHub repository is accessible and up to date'
+            });
+        } else {
+            res.json({
+                success: false,
+                error: 'Unable to access GitHub repository'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error checking GitHub status:', error);
+        res.json({
+            success: false,
+            error: `GitHub check failed: ${error.message}`
+        });
     }
 });
 
