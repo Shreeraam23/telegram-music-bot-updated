@@ -240,21 +240,6 @@ const bot = new TelegramBot(BOT_TOKEN, {
     polling: false // Use webhook instead of polling to avoid conflicts
 });
 
-// Disable caching for JS and CSS files to ensure updates are loaded
-app.use('/script.js', (req, res, next) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
-});
-
-app.use('/style.css', (req, res, next) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
-});
-
 // Serve static files
 app.use(express.static('public'));
 app.use(express.json());
@@ -425,10 +410,6 @@ async function fetchMusicFromChannel() {
         
         console.log('🔍 No music found in channel, creating demo playlist...');
         console.log('💡 Real music will be added when you upload to the channel');
-        console.log('📋 Instructions for users:');
-        console.log('   1. Upload audio files to your Telegram channel');
-        console.log('   2. Wait a few seconds for the bot to detect them');
-        console.log('   3. Click the "Refresh" button on the webpage');
         
         return await createFallbackPlaylist();
 
@@ -438,10 +419,20 @@ async function fetchMusicFromChannel() {
     }
 }
 
-// Advanced channel scanning function for manual refresh
+// Advanced channel scanning function for manual refresh - now uses enhanced scanning
 async function performAdvancedChannelScan() {
     try {
-        console.log('🔍 Starting ENHANCED channel scan for ALL music files...');
+        console.log('🔍 Starting ENHANCED advanced channel scan for ALL music files...');
+        
+        // Use the enhanced scanning method
+        const enhancedResults = await fetchFromChannelHistory();
+        
+        if (enhancedResults && enhancedResults.length > 0) {
+            console.log(`🎉 Enhanced advanced scan found ${enhancedResults.length} music files!`);
+            return enhancedResults;
+        }
+        
+        console.log('🔄 Enhanced scan found no results, trying alternative method...');
         
         const targetChannel = CHANNEL_ID;
         let channelInfo;
@@ -455,26 +446,9 @@ async function performAdvancedChannelScan() {
             return null;
         }
         
-        // Try multiple scanning methods for existing songs
-        const detectedTracks = await tryMultipleScanningMethods(targetChannel, channelInfo);
+        const detectedTracks = [];
         
-        if (detectedTracks && detectedTracks.length > 0) {
-            console.log(`🎵 SUCCESS! Found ${detectedTracks.length} existing songs!`);
-            return detectedTracks;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('❌ Error in advanced channel scan:', error.message);
-        return null;
-    }
-}
-
-// New enhanced scanning method that uses multiple approaches
-async function tryMultipleScanningMethods(targetChannel, channelInfo) {
-    const detectedTracks = [];
-        
-        // Method 1: Temporarily disable webhook and use getUpdates
+        // Method 1: Temporarily disable webhook and use getUpdates (fallback)
         try {
             console.log('🔧 Temporarily switching to polling mode for comprehensive scan...');
             
@@ -631,20 +605,23 @@ async function tryMultipleScanningMethods(targetChannel, channelInfo) {
             }
         }
         
-    
-    console.log(`🎯 Enhanced scan completed. Found ${detectedTracks.length} audio files`);
-    return detectedTracks.length > 0 ? detectedTracks : null;
+        console.log(`🎯 Advanced scan completed. Found ${detectedTracks.length} audio files`);
+        return detectedTracks.length > 0 ? detectedTracks : null;
+        
+    } catch (error) {
+        console.error('❌ Error in advanced channel scan:', error.message);
+        return null;
+    }
 }
 
-// Function to fetch music from channel history
+// Enhanced function to fetch music from channel using multiple methods
 async function fetchFromChannelHistory() {
     try {
-        console.log(`🔍 Attempting to fetch music from channel ID ${CHANNEL_ID}...`);
+        console.log(`🔍 Enhanced scan: Attempting to fetch music from channel ID ${CHANNEL_ID}...`);
         
         // First try to get channel info
         let channelInfo;
         try {
-            // Try by channel ID
             channelInfo = await bot.getChat(CHANNEL_ID);
             console.log(`✅ Found channel: ${channelInfo.title}`);
         } catch (error) {
@@ -652,138 +629,187 @@ async function fetchFromChannelHistory() {
             return null;
         }
         
-        // Try to get recent messages from the channel
-        console.log('📥 Fetching recent messages from channel...');
-        
-        let channelMessages = [];
+        // Check bot permissions first
         let hasAdminAccess = false;
-        
-        // Check bot permissions and try to get channel messages
         try {
-            // Get bot info first
             const botInfo = await bot.getMe();
             const botId = botInfo.id.toString();
-            
-            // Test if bot can get basic channel info (requires member access)
             const adminsList = await bot.getChatAdministrators(channelInfo.id);
             const botAdmin = adminsList.find(admin => admin.user.id.toString() === botId);
             
             if (botAdmin) {
                 hasAdminAccess = true;
                 console.log('✅ Bot confirmed as channel administrator');
-                
-                // Try to get recent updates that might contain channel posts
-                console.log('🔍 Searching for channel audio messages...');
-                
-                // Method 1: Try to get chat history using getChatHistory (alternative to getUpdates)
-                try {
-                    console.log('🌐 Trying to get channel chat history...');
-                    
-                    // Try to search for recent messages in the channel
-                    // Since we can't use getUpdates with webhook, we'll try searchMessages
-                    const searchUrl = `https://api.telegram.org/bot${BOT_TOKEN}/searchMessages`;
-                    
-                    // Alternative: Try to get channel chat history using a different approach
-                    console.log('📝 Scanning for audio files using admin privileges...');
-                    
-                    // Since getUpdates conflicts with webhook, we'll create a scan mechanism
-                    // This will try to detect all audio files that were recently processed
-                    const detectedFiles = [];
-                    
-                    // Try to get the latest message ID to scan backwards
-                    try {
-                        // Use sendMessage with a temporary message to get chat info
-                        const testMsg = await bot.sendMessage(channelInfo.id, '🔍 Scanning for music files...', { 
-                            disable_notification: true 
-                        });
-                        
-                        if (testMsg.message_id) {
-                            console.log(`📍 Latest message ID: ${testMsg.message_id}`);
-                            
-                            // Delete the test message immediately
-                            await bot.deleteMessage(channelInfo.id, testMsg.message_id);
-                            
-                            // Now scan backwards from this ID to find audio files
-                            console.log('🔄 Scanning recent messages for audio files...');
-                            
-                            // Since we can't directly access old messages via API,
-                            // we'll rely on real-time detection from this point forward
-                            console.log('💡 Historical scan completed. Bot will detect new uploads automatically.');
-                        }
-                    } catch (scanError) {
-                        console.log('⚠️ Could not perform message scan:', scanError.message);
-                    }
-                    
-                } catch (historyError) {
-                    console.log('⚠️ Could not get channel history:', historyError.message);
-                }
-                
-                // Method 2: If no messages found, create a test to show we're connected
-                if (channelMessages.length === 0) {
-                    console.log('💡 No recent audio messages found. This means:');
-                    console.log('   • Channel may not have audio files yet');
-                    console.log('   • Audio files were uploaded before bot was added');
-                    console.log('   • New uploads will be detected in real-time');
-                    console.log('🎵 Ready to detect new music uploads!');
-                }
             } else {
                 console.log('⚠️ Bot is not an administrator in the channel');
+                return null;
             }
         } catch (adminError) {
             console.log('⚠️ Could not verify admin access:', adminError.message);
+            return null;
         }
         
+        console.log('🔍 Using enhanced message scanning methods...');
         const foundMusic = [];
         
-        // Process each message for audio files
-        for (const update of channelMessages) {
-            const msg = update.channel_post;
-            const audioFile = msg.audio || msg.voice || msg.document;
+        // Method 1: Try to scan for audio using direct message ID scanning
+        try {
+            console.log('📂 Method 1: Direct message ID scanning...');
             
-            if (audioFile) {
-                // Check if it's actually an audio file
-                const isAudioFile = audioFile.mime_type?.includes('audio') || 
-                                  audioFile.file_name?.match(/\.(mp3|wav|ogg|m4a|flac|aac)$/i) ||
-                                  msg.audio; // Telegram audio type
-                
-                if (isAudioFile) {
-                    try {
-                        const fileUrl = await bot.getFileLink(audioFile.file_id);
-                        const track = {
-                            title: audioFile.title || audioFile.file_name || audioFile.performer || `Music ${foundMusic.length + 1}`,
-                            url: fileUrl,
-                            duration: audioFile.duration ? `${Math.floor(audioFile.duration / 60)}:${(audioFile.duration % 60).toString().padStart(2, '0')}` : 'Unknown',
-                            fileId: audioFile.file_id,
-                            performer: audioFile.performer || 'Unknown Artist',
-                            messageId: msg.message_id
-                        };
+            // Get current message ID by sending and deleting a test message
+            const testMsg = await bot.sendMessage(channelInfo.id, '🔍 Scanning...', { 
+                disable_notification: true 
+            });
+            const currentMessageId = testMsg.message_id;
+            await bot.deleteMessage(channelInfo.id, testMsg.message_id);
+            
+            console.log(`📍 Current message ID: ${currentMessageId}`);
+            
+            // Scan backwards from current message ID
+            const scanRange = 1000; // Scan last 1000 messages
+            let foundCount = 0;
+            
+            for (let msgId = currentMessageId - 1; msgId > Math.max(1, currentMessageId - scanRange); msgId--) {
+                try {
+                    // Try to forward the message to get its content
+                    const forwardedMsg = await bot.forwardMessage(channelInfo.id, channelInfo.id, msgId);
+                    
+                    // Check if it has audio content
+                    const audioFile = forwardedMsg.audio || forwardedMsg.voice || forwardedMsg.document;
+                    
+                    if (audioFile) {
+                        const isAudioFile = audioFile.mime_type?.includes('audio') || 
+                                          audioFile.file_name?.match(/\.(mp3|wav|ogg|m4a|flac|aac|mp4)$/i) ||
+                                          forwardedMsg.audio;
                         
-                        foundMusic.push(track);
-                        console.log(`🎵 Found: ${track.title}`);
-                    } catch (fileError) {
-                        console.error(`❌ Error getting file link for ${audioFile.title || 'audio file'}:`, fileError.message);
+                        if (isAudioFile) {
+                            try {
+                                const fileUrl = await bot.getFileLink(audioFile.file_id);
+                                const track = {
+                                    title: audioFile.title || audioFile.file_name || audioFile.performer || `Music ${foundMusic.length + 1}`,
+                                    url: fileUrl,
+                                    duration: audioFile.duration ? `${Math.floor(audioFile.duration / 60)}:${(audioFile.duration % 60).toString().padStart(2, '0')}` : 'Unknown',
+                                    fileId: audioFile.file_id,
+                                    performer: audioFile.performer || 'Unknown Artist',
+                                    messageId: msgId,
+                                    uploadDate: forwardedMsg.date ? new Date(forwardedMsg.date * 1000).toISOString() : new Date().toISOString()
+                                };
+                                
+                                foundMusic.push(track);
+                                foundCount++;
+                                console.log(`🎵 Found audio: ${track.title} (ID: ${msgId})`);
+                                
+                                // Delete the forwarded message to keep channel clean
+                                await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id);
+                                
+                                // Add small delay to prevent rate limiting
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                                
+                            } catch (fileError) {
+                                console.log(`⚠️ Could not get file link for message ${msgId}`);
+                                // Delete the forwarded message anyway
+                                try {
+                                    await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id);
+                                } catch (delError) {
+                                    // Ignore delete errors
+                                }
+                            }
+                        } else {
+                            // Delete non-audio forwarded message
+                            try {
+                                await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id);
+                            } catch (delError) {
+                                // Ignore delete errors
+                            }
+                        }
+                    } else {
+                        // Delete non-audio forwarded message
+                        try {
+                            await bot.deleteMessage(channelInfo.id, forwardedMsg.message_id);
+                        } catch (delError) {
+                            // Ignore delete errors
+                        }
+                    }
+                    
+                } catch (forwardError) {
+                    // Message doesn't exist or can't be forwarded, continue
+                    continue;
+                }
+                
+                // Break if we found enough songs or hit rate limit
+                if (foundCount >= 50) {
+                    console.log('📊 Found maximum songs limit (50), stopping scan');
+                    break;
+                }
+            }
+            
+            console.log(`📂 Method 1 completed: Found ${foundCount} audio files`);
+            
+        } catch (method1Error) {
+            console.log('⚠️ Method 1 failed:', method1Error.message);
+        }
+        
+        // Method 2: Try using different Telegram API endpoints
+        if (foundMusic.length === 0) {
+            try {
+                console.log('📂 Method 2: Alternative API scanning...');
+                
+                // Try to use getChatHistory if available
+                const historyUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatHistory`;
+                const historyResponse = await axios.post(historyUrl, {
+                    chat_id: channelInfo.id,
+                    limit: 100
+                }, {
+                    timeout: 10000
+                }).catch(() => null);
+                
+                if (historyResponse && historyResponse.data.ok) {
+                    console.log('✅ Got chat history, scanning for audio...');
+                    // Process history messages
+                    const messages = historyResponse.data.result || [];
+                    for (const msg of messages) {
+                        const audioFile = msg.audio || msg.voice || msg.document;
+                        if (audioFile && (audioFile.mime_type?.includes('audio') || msg.audio)) {
+                            try {
+                                const fileUrl = await bot.getFileLink(audioFile.file_id);
+                                const track = {
+                                    title: audioFile.title || audioFile.file_name || audioFile.performer || `Music ${foundMusic.length + 1}`,
+                                    url: fileUrl,
+                                    duration: audioFile.duration ? `${Math.floor(audioFile.duration / 60)}:${(audioFile.duration % 60).toString().padStart(2, '0')}` : 'Unknown',
+                                    fileId: audioFile.file_id,
+                                    performer: audioFile.performer || 'Unknown Artist',
+                                    messageId: msg.message_id
+                                };
+                                foundMusic.push(track);
+                                console.log(`🎵 Found: ${track.title}`);
+                            } catch (fileError) {
+                                console.log(`⚠️ Error getting file link: ${fileError.message}`);
+                            }
+                        }
                     }
                 }
+                
+            } catch (method2Error) {
+                console.log('⚠️ Method 2 failed:', method2Error.message);
             }
         }
         
         if (foundMusic.length > 0) {
-            console.log(`🎉 Successfully found ${foundMusic.length} music files in channel!`);
+            console.log(`🎉 Enhanced scan found ${foundMusic.length} music files in channel!`);
+            // Sort by message ID (oldest first)
+            foundMusic.sort((a, b) => a.messageId - b.messageId);
             return foundMusic;
         } else {
-            console.log('📭 No audio files found in recent channel messages');
+            console.log('📭 Enhanced scan: No audio files found in channel messages');
+            console.log('💡 This usually means:');
+            console.log('   • Songs were uploaded before bot was added as admin');
+            console.log('   • Channel permissions need to be adjusted');
+            console.log('   • Try re-uploading or forwarding one song to trigger detection');
             return null;
         }
         
     } catch (error) {
-        console.error('❌ Error fetching from channel history:', error.message);
-        
-        // If bot is not admin, provide helpful message
-        if (error.message.includes('not enough rights') || error.message.includes('Forbidden')) {
-            console.log('💡 Bot needs admin rights in the channel to fetch music');
-            console.log(`💡 Please add this bot as admin to the channel`);
-        }
-        
+        console.error('❌ Error in enhanced channel scan:', error.message);
         return null;
     }
 }
