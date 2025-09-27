@@ -426,7 +426,7 @@ async function fetchMusicFromChannel() {
 // Advanced channel scanning function for manual refresh
 async function performAdvancedChannelScan() {
     try {
-        console.log('🔍 Starting advanced channel scan for ALL music files...');
+        console.log('🔍 Starting ENHANCED channel scan for ALL music files...');
         
         const targetChannel = CHANNEL_ID;
         let channelInfo;
@@ -440,7 +440,24 @@ async function performAdvancedChannelScan() {
             return null;
         }
         
-        const detectedTracks = [];
+        // Try multiple scanning methods for existing songs
+        const detectedTracks = await tryMultipleScanningMethods(targetChannel, channelInfo);
+        
+        if (detectedTracks && detectedTracks.length > 0) {
+            console.log(`🎵 SUCCESS! Found ${detectedTracks.length} existing songs!`);
+            return detectedTracks;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('❌ Error in advanced channel scan:', error.message);
+        return null;
+    }
+}
+
+// New enhanced scanning method that uses multiple approaches
+async function tryMultipleScanningMethods(targetChannel, channelInfo) {
+    const detectedTracks = [];
         
         // Method 1: Temporarily disable webhook and use getUpdates
         try {
@@ -599,13 +616,9 @@ async function performAdvancedChannelScan() {
             }
         }
         
-        console.log(`🎯 Advanced scan completed. Found ${detectedTracks.length} audio files`);
-        return detectedTracks.length > 0 ? detectedTracks : null;
-        
-    } catch (error) {
-        console.error('❌ Error in advanced channel scan:', error.message);
-        return null;
-    }
+    
+    console.log(`🎯 Enhanced scan completed. Found ${detectedTracks.length} audio files`);
+    return detectedTracks.length > 0 ? detectedTracks : null;
 }
 
 // Function to fetch music from channel history
