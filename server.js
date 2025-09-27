@@ -410,6 +410,10 @@ async function fetchMusicFromChannel() {
         
         console.log('🔍 No music found in channel, creating demo playlist...');
         console.log('💡 Real music will be added when you upload to the channel');
+        console.log('📋 Instructions for users:');
+        console.log('   1. Upload audio files to your Telegram channel');
+        console.log('   2. Wait a few seconds for the bot to detect them');
+        console.log('   3. Click the "Refresh" button on the webpage');
         
         return await createFallbackPlaylist();
 
