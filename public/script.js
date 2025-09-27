@@ -387,6 +387,19 @@ class TelegramMusicPlayer {
         }
     }
     
+    showDetailedInstructions() {
+        // Show detailed instructions for loading existing songs
+        this.trackTitle.textContent = '📋 आपके existing songs load करने के लिए:';
+        this.trackArtist.textContent = '1. Telegram channel में जाएं 2. कोई भी एक song को forward करें 3. Refresh button दबाएं';
+        
+        // Also show in console for developers
+        console.log('📋 Instructions for loading existing songs:');
+        console.log('1. Go to your Telegram channel: "Web music 🎶"');
+        console.log('2. Forward any ONE existing song to the same channel');
+        console.log('3. Click the Refresh button on this webpage');
+        console.log('4. All your channel songs will then be detected!');
+    }
+
     showMessage(message) {
         this.trackTitle.textContent = message;
         this.trackArtist.textContent = 'Telegram Music Player';
