@@ -25,11 +25,9 @@
     "@octokit/rest": "^22.0.0",
     "axios": "^1.12.2",
     "express": "^5.1.0",
+    "netlify-cli": "^23.7.3",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.66.0",
     "serverless-http": "^4.0.0"
-  },
-  "devDependencies": {
-    "netlify-cli": "^23.7.3"
   }
 }
