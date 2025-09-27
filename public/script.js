@@ -80,8 +80,8 @@ class TelegramMusicPlayer {
             console.log('🔄 Loading playlist...');
             
             // Use proper API URL for both development and production  
-            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-            const apiUrl = `${baseUrl}/playlist?_t=${Date.now()}`;
+            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+            const apiUrl = `${baseUrl}/api/playlist?_t=${Date.now()}`;
             
             console.log('📡 API URL:', apiUrl);
             
@@ -103,16 +103,9 @@ class TelegramMusicPlayer {
             
             if (this.playlist.length > 0) {
                 await this.loadCurrentTrack();
-                // Check if it's demo music or real music
-                const isDemo = this.playlist[0]?.title?.includes('Demo Song') || false;
-                if (isDemo) {
-                    this.showMessage(`⚠️ Using demo playlist (${this.playlist.length} tracks). Upload music to your Telegram channel to get your actual songs!`);
-                } else {
-                    this.showMessage(`✅ Loaded ${this.playlist.length} tracks from channel`);
-                }
+                this.showMessage(`✅ Loaded ${this.playlist.length} tracks from channel`);
             } else {
-                this.showMessage('📱 आपके existing songs दिखाने के लिए एक simple step करें!');
-                this.showDetailedInstructions();
+                this.showMessage('No music found in channel. Please check if the bot has access to the channel.');
             }
         } catch (error) {
             console.error('❌ Error loading playlist:', error);
@@ -122,8 +115,8 @@ class TelegramMusicPlayer {
     
     async loadCurrentTrack() {
         try {
-            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-            const response = await fetch(`${baseUrl}/current`);
+            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+            const response = await fetch(`${baseUrl}/api/current`);
             const data = await response.json();
             
             if (data.track) {
@@ -152,23 +145,7 @@ class TelegramMusicPlayer {
             this.playlistContainer.innerHTML = `
                 <div class="loading">
                     <i class="fas fa-music"></i>
-                    <h3 style="color: #007bff; margin: 15px 0;">🎵 आपके Songs दिखाने के लिए</h3>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left;">
-                        <p style="font-weight: bold; color: #28a745; margin-bottom: 15px;">✨ Simple Solution:</p>
-                        <ol style="color: #495057; line-height: 1.6;">
-                            <li>📱 अपना Telegram channel "🎶 Web music" खोलें</li>
-                            <li>🎵 कोई भी एक existing song ढूंढें</li>
-                            <li>➡️ Song पर hold करके "Forward" करें</li>
-                            <li>🔄 Same channel में forward करें</li>
-                            <li>✨ यहां आकर Refresh दबाएं</li>
-                        </ol>
-                        <p style="color: #dc3545; font-weight: bold; margin-top: 15px;">
-                            🎆 बस एक song forward करने से आपके सारे songs दिख जाएंगे!
-                        </p>
-                    </div>
-                    <button onclick="player.refreshPlaylist()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-                        🔄 Refresh Songs
-                    </button>
+                    No music files found in the channel yet.
                 </div>
             `;
             return;
@@ -189,8 +166,8 @@ class TelegramMusicPlayer {
     async playTrack(index) {
         try {
             // Call backend API to set the specific track
-            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-            const response = await fetch(`${baseUrl}/track/${index}`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+            const response = await fetch(`${baseUrl}/api/track/${index}`, { method: 'POST' });
             const result = await response.json();
             
             if (result.success) {
@@ -229,13 +206,7 @@ class TelegramMusicPlayer {
                 this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
             }).catch(error => {
                 console.error('Error playing audio:', error);
-                // Only show error if audio is actually not playing
-                if (this.audio.paused && this.audio.currentTime === 0) {
-                    this.showMessage('Error playing audio. The file might not be supported.');
-                } else {
-                    // Audio might be playing despite the Promise rejection
-                    console.log('Audio play promise rejected but audio might still be playing');
-                }
+                this.showMessage('Error playing audio. The file might not be supported.');
             });
         } else {
             this.showMessage('No audio file available to play.');
@@ -250,8 +221,8 @@ class TelegramMusicPlayer {
     
     async nextTrack() {
         try {
-            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-            await fetch(`${baseUrl}/next`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+            await fetch(`${baseUrl}/api/next`, { method: 'POST' });
             await this.loadCurrentTrack();
             if (this.isPlaying) {
                 this.play();
@@ -264,8 +235,8 @@ class TelegramMusicPlayer {
     
     async previousTrack() {
         try {
-            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-            await fetch(`${baseUrl}/prev`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+            await fetch(`${baseUrl}/api/prev`, { method: 'POST' });
             await this.loadCurrentTrack();
             if (this.isPlaying) {
                 this.play();
@@ -322,8 +293,8 @@ class TelegramMusicPlayer {
                         
                         // Sync position with backend
                         try {
-                            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-                            await fetch(`${baseUrl}/seek`, {
+                            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+                            await fetch(`${baseUrl}/api/seek`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
@@ -361,8 +332,8 @@ class TelegramMusicPlayer {
             
             this.showMessage('Refreshing playlist from Telegram channel...');
             
-            const baseUrl = window.location.hostname.includes('localhost') ? '/api' : '/.netlify/functions/api';
-            const response = await fetch(`${baseUrl}/refresh`, { method: 'POST' });
+            const baseUrl = window.location.hostname.includes('localhost') ? '' : '/.netlify/functions';
+            const response = await fetch(`${baseUrl}/api/refresh`, { method: 'POST' });
             const result = await response.json();
             
             if (result.success) {
@@ -387,19 +358,6 @@ class TelegramMusicPlayer {
         }
     }
     
-    showDetailedInstructions() {
-        // Show detailed instructions for loading existing songs
-        this.trackTitle.textContent = '📋 आपके existing songs load करने के लिए:';
-        this.trackArtist.textContent = '1. Telegram channel में जाएं 2. कोई भी एक song को forward करें 3. Refresh button दबाएं';
-        
-        // Also show in console for developers
-        console.log('📋 Instructions for loading existing songs:');
-        console.log('1. Go to your Telegram channel: "Web music 🎶"');
-        console.log('2. Forward any ONE existing song to the same channel');
-        console.log('3. Click the Refresh button on this webpage');
-        console.log('4. All your channel songs will then be detected!');
-    }
-
     showMessage(message) {
         this.trackTitle.textContent = message;
         this.trackArtist.textContent = 'Telegram Music Player';
